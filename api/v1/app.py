@@ -1,41 +1,39 @@
 #!/usr/bin/python3
-""" Flask api to return status
+"""main app file for Flask instance in REST API
 """
-from api.v1.views import app_views
-from flask import Flask, jsonify, make_response
+from flask import Flask
+from flask import jsonify
 from flask_cors import CORS
 from models import storage
-from os import getenv
+from api.v1.views import app_views
+import os
 
 app = Flask(__name__)
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 app.register_blueprint(app_views)
-CORS(app, origins='0.0.0.0')
+CORS(app, resources={r'/*': {'origins': '0.0.0.0'}})
+
+
+def page_not_found(e):
+    """404 error json response"""
+    return jsonify({'error': "Not found"}), 404
 
 
 @app.teardown_appcontext
-def teardown(exception):
-    """ destroys DB session in case of DB storage
-        reloads objects in case of File Storage
+def teardown_appcontext(exc=None):
+    """called on teardown of app contexts of flask
     """
     storage.close()
 
 
-@app.errorhandler(404)
-def error_404(error):
-    """ response for 404 errors"""
-    return make_response(jsonify({"error": "Not found"}), 404)
-
-
 if __name__ == "__main__":
-    #  get host address
-    host = getenv('HBNB_API_HOST')
-    if host is None:
-        host = '0.0.0.0'
-
-    #  get port number
-    port = getenv('HBNB_API_PORT')
-    if port is None:
-        port = '5000'
-
-    app.run(host=host, port=port)
+    """run the app if the script is not being imported
+    """
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    app.register_error_handler(404, page_not_found)
+    fetched_host = os.environ.get('HBNB_API_HOST')
+    fetched_port = os.environ.get('HBNB_API_PORT')
+    if fetched_host is None:
+        fetched_host = '0.0.0.0'
+    if fetched_port is None:
+        fetched_port = 5000
+    app.run(host=fetched_host, port=fetched_port, threaded=True)
